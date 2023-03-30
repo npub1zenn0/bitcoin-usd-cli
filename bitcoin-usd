@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+import requests
+import json
+import sys
+import re
+
+# Define the URL for the Kraken API and the currency pair
+url = "https://api.kraken.com/0/public/Ticker?pair=xbtusd"
+
+# Define a function to parse the input string and return the number of Satoshis
+def parse_satoshis(input_str):
+    # Check if the input string contains a suffix like "k" or "M"
+    match = re.match(r"^(\d+\.?\d*)([kM]?)$", input_str)
+    if not match:
+        print("Invalid input: <satoshis> must be a number with optional suffix k or M")
+        sys.exit(1)
+
+    # Multiply the input number by the appropriate factor to get the Satoshis amount
+    satoshis = int(float(match.group(1)) * {"": 1, "k": 1000, "M": 1000000}[match.group(2)])
+
+    return satoshis
+
+# Define a function to convert Satoshis to USD
+def sat_to_usd(satoshis):
+    # Send a GET request to the Kraken API and parse the JSON response
+    response = requests.get(url)
+    data = json.loads(response.text)
+    
+    # Extract the current XBT/USD price from the JSON response
+    xbt_usd_price = float(data["result"]["XXBTZUSD"]["c"][0])
+    
+    # Calculate the USD value of the specified amount of Satoshis
+    usd_value = satoshis * (xbt_usd_price / 100000000)
+    
+    # Return the USD value as a float with 2 decimal places
+    return round(usd_value, 2)
+
+# Get the amount of Satoshis from the command-line argument
+if len(sys.argv) != 2:
+    print("Usage: python3 price.py <satoshis>")
+    sys.exit(1)
+
+satoshis = parse_satoshis(sys.argv[1])
+
+# Call the sat_to_usd() function to convert Satoshis to USD
+usd_value = sat_to_usd(satoshis)
+
+# Print the USD value to the console
+print(f"{satoshis} Satoshis is worth {usd_value} USD")
